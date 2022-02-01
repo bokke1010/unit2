@@ -27,13 +27,13 @@ def generate_prison():
         h_start = m_start + med_s_population
         h_end = h_start + high_s_population
         for j in range(l_start, m_start):
-            if random() < low_s_p:
+            if random() < low_s_contacts / guard_population:
                 G.add_edge(i, j)
         for j in range(m_start, h_start):
-            if random() < med_s_p:
+            if random() < med_s_contacts / guard_population:
                 G.add_edge(i, j)
         for j in range(h_start, h_end):
-            if random() < high_s_p:
+            if random() < high_s_contacts / guard_population:
                 G.add_edge(i, j)
     return G
 
@@ -41,13 +41,14 @@ class simulation:
 
     states = ["S", "I", "R", "C", "D"]
 
-    def __init__(self, G, p=0.5, time_infected=2, solitary_response=0, solitary_capacity=0):
+    def __init__(self, G, p=0.5, time_infected=2, solitary_response=0, solitary_capacity=0, lethality=0):
         self.graph = G
-        self.p = 0
+        self.p = p
         self.time_infected = time_infected
         self.solitary_response = solitary_response
         self.solitary_capacity = solitary_capacity
         self.isolated = 0
+        self.lethality = 0
 
         for node in self.graph.nodes.values():
             node["state"] = "S"
@@ -66,14 +67,20 @@ class simulation:
                     infectable.append(nb)
                 node["time"] += 1
                 if node["time"] == self.time_infected:
-                    node["state"] = "R"
+                    if random() < self.lethality:
+                        node["state"] = "D"
+                    else:
+                        node["state"] = "R"
                 elif random() < self.solitary_response and self.isolated < self.solitary_capacity:
                     node["state"] = "C"
                     self.isolated += 1
             elif node["state"] == "C":
                 node["time"] += 1
                 if node["time"] == self.time_infected:
-                    node["state"] = "R"
+                    if random() < self.lethality:
+                        node["state"] = "D"
+                    else:
+                        node["state"] = "R"
                     self.isolated -= 1
         for i in infectable:
             node = self.graph.nodes[i]

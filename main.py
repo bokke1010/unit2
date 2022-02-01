@@ -3,8 +3,8 @@
 import simulate
 
 # Main variables
-p = 0.2
-time_infectious = 12
+p = 0.06
+time_infectious = 6
 
 colors = {
     "S": "blue",
@@ -30,7 +30,7 @@ graph = simulate.generate_prison()
 # nx.draw(graph, node_color=color_map)
 # plt.show()
 
-simulation = simulate.simulation(graph, p, time_infectious)
+simulation = simulate.simulation(graph, p, time_infectious, 0.2, 16, 0.05)
 simulation.infect(0)
 results = simulation.simulate(200, colors, interventions, True)
 
