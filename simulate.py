@@ -9,6 +9,7 @@ def generate_prison():
     guard_population, low_s_population, med_s_population, high_s_population = 100, 70, 110, 70
     guard_contacts, low_s_contacts, med_s_contacts, high_s_contacts = 6, 6, 4, 2
     guard_p, low_s_p, med_s_p, high_s_p = 0.2, 0.18, 0.14, 0.12
+    guard_low_mix, guard_med_mix, guard_high_mix = 1.2, 1.8, 2.4
 
     low_s = nx.watts_strogatz_graph(low_s_population, low_s_contacts, low_s_p)
     med_s = nx.watts_strogatz_graph(med_s_population, med_s_contacts, med_s_p)
@@ -27,13 +28,13 @@ def generate_prison():
         h_start = m_start + med_s_population
         h_end = h_start + high_s_population
         for j in range(l_start, m_start):
-            if random() < low_s_contacts / guard_population:
+            if random() < guard_low_mix / guard_population:
                 G.add_edge(i, j)
         for j in range(m_start, h_start):
-            if random() < med_s_contacts / guard_population:
+            if random() < guard_med_mix / guard_population:
                 G.add_edge(i, j)
         for j in range(h_start, h_end):
-            if random() < high_s_contacts / guard_population:
+            if random() < guard_high_mix / guard_population:
                 G.add_edge(i, j)
     return G
 
@@ -42,17 +43,20 @@ class simulation:
     states = ["S", "I", "R", "C", "D"]
 
     def __init__(self, G, p=0.5, time_infected=2, solitary_response=0, solitary_capacity=0, lethality=0):
-        self.graph = G
-        self.p = p
-        self.time_infected = time_infected
-        self.solitary_response = solitary_response
-        self.solitary_capacity = solitary_capacity
-        self.isolated = 0
-        self.lethality = 0
+        self.graph:nx.Graph = G
+        self.population:int = len(G.nodes)
+        self.p:float = p
+        self.time_infected:int = time_infected
+        self.solitary_response:float = solitary_response
+        self.solitary_capacity:int = solitary_capacity
+        self.isolated:int = 0
+        self.lethality:float = 0
 
         for node in self.graph.nodes.values():
             node["state"] = "S"
             node["time"] = 0
+
+        self.stats:tuple = self.state_stats()
 
     def infect(self, node = "Random"):
         if node == "Random":
@@ -95,28 +99,33 @@ class simulation:
     def _count_state(self, state):
         return sum(map(lambda x : x["state"] == state, self.graph.nodes.values()))
 
-    def simulate(self, T:int, colors:dict, interventions:dict = {}, graph_states:bool = False):
+    def state_stats(self):
+        return tuple(self._count_state(state) for state in self.states)
+
+    def simulate(self, T:int, colors:dict, interventions:dict = {}, interstep = None, graph_states:bool = False) -> list :
 
         # interventions = {
         #     43: demo_intervention,
         #     75: lower_p
         # }
 
-        data = {}
-        for state in self.states:
-            data[state] = [self._count_state(state)]
+        data = [self.stats]
 
         for t in range(T):
             if t in interventions:
                 interventions[t](self.graph)
             self._step()
-            for state in self.states:
-                data[state].append(self._count_state(state))
+            self.stats = self.state_stats()
+            data.append(self.stats)
+            if interstep != None:
+                interstep(self)
 
 
-        if graph_states:            
-            for state in self.states:
-                plt.plot(data[state], color = colors[state])
+        if graph_states:
+            plot_data = list(zip(*data))
+            for i, state in enumerate(self.states):
+                plt.plot(plot_data[i], color = colors[state], label=state)
+                plt.legend()
             plt.show()
             self.draw_colored(colors)
         return data
