@@ -1,14 +1,14 @@
 from time import time
 import networkx as nx
 import matplotlib.pyplot as plt
-from random import choice, random
+from random import choice, random, randint
 
 def generate_prison():
     G = nx.Graph()
     
-    guard_population, low_s_population, med_s_population, high_s_population = 100, 70, 110, 70
+    guard_population, low_s_population, med_s_population, high_s_population = 150, 140, 120, 80
     guard_contacts, low_s_contacts, med_s_contacts, high_s_contacts = 6, 6, 4, 2
-    guard_p, low_s_p, med_s_p, high_s_p = 0.2, 0.18, 0.14, 0.12
+    guard_p, low_s_p, med_s_p, high_s_p = 0.18, 0.14, 0.10, 0.08
     guard_low_mix, guard_med_mix, guard_high_mix = 1.2, 1.8, 2.4
 
     low_s = nx.watts_strogatz_graph(low_s_population, low_s_contacts, low_s_p)
@@ -40,17 +40,18 @@ def generate_prison():
 
 class simulation:
 
-    states = ["S", "I", "R", "C", "D"]
+    states = ["S", "E", "I", "R", "C", "D"]
 
-    def __init__(self, G, p=0.5, time_infected=2, solitary_response=0, solitary_capacity=0, lethality=0):
+    def __init__(self, G, p=0.5, time_infected=(2,3), time_exposed=(2,3), solitary_response=0, solitary_capacity=0, lethality=0):
         self.graph:nx.Graph = G
         self.population:int = len(G.nodes)
         self.p:float = p
+        self.time_exposed:int = time_exposed
         self.time_infected:int = time_infected
         self.solitary_response:float = solitary_response
         self.solitary_capacity:int = solitary_capacity
+        self.lethality:float = lethality
         self.isolated:int = 0
-        self.lethality:float = 0
 
         for node in self.graph.nodes.values():
             node["state"] = "S"
@@ -66,30 +67,28 @@ class simulation:
     def _step(self):
         infectable = []
         for i, node in self.graph.nodes.items():
-            if node["state"] == "I":
-                for nb in self.graph[i]:
-                    infectable.append(nb)
-                node["time"] += 1
-                if node["time"] == self.time_infected:
+            node["time"] -= 1
+            if node["state"] in ["C", "I"]:
+                if node["state"] == "I":
+                    for nb in self.graph[i]:
+                        infectable.append(nb)
+                    if random() < self.solitary_response and self.isolated < self.solitary_capacity:
+                        node["state"] = "C"
+                        self.isolated += 1
+                if node["time"] == 0:
                     if random() < self.lethality:
                         node["state"] = "D"
                     else:
                         node["state"] = "R"
-                elif random() < self.solitary_response and self.isolated < self.solitary_capacity:
-                    node["state"] = "C"
-                    self.isolated += 1
-            elif node["state"] == "C":
-                node["time"] += 1
-                if node["time"] == self.time_infected:
-                    if random() < self.lethality:
-                        node["state"] = "D"
-                    else:
-                        node["state"] = "R"
-                    self.isolated -= 1
+            elif node["state"] == "E":
+                if node["time"] == 0:
+                    node["state"] = "I"
+                    node["time"] = randint(*self.time_infected)
         for i in infectable:
             node = self.graph.nodes[i]
             if node["state"] == "S" and random() < self.p:
-                node["state"] = "I"
+                node["state"] = "E"
+                node["time"] = randint(*self.time_exposed)
 
     def draw_colored(self, colors: dict):
         color_map = [colors[node["state"]] for node in self.graph.nodes.values()]
@@ -103,11 +102,6 @@ class simulation:
         return tuple(self._count_state(state) for state in self.states)
 
     def simulate(self, T:int, colors:dict, interventions:dict = {}, interstep = None, graph_states:bool = False) -> list :
-
-        # interventions = {
-        #     43: demo_intervention,
-        #     75: lower_p
-        # }
 
         data = [self.stats]
 
