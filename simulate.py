@@ -1,5 +1,6 @@
 from time import time
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 from random import choice, random, randint
 
@@ -92,9 +93,17 @@ class simulation:
                 node["state"] = "E"
                 node["time"] = randint(*self.time_exposed)
 
-    def draw_colored(self, colors: dict):
+    def draw_colored(self, colors: dict, title:str=""):
         color_map = [colors[node["state"]] for node in self.graph.nodes.values()]
-        nx.draw(self.graph, node_color=color_map)
+        positions = nx.spring_layout(self.graph)
+        offsets = {"green": np.array([-20, 20]), "orange": np.array([20, 20]), "red": np.array([0, -30]), "blue": np.array([0, 0])}
+        for key in positions.keys():
+            typecolor = self.graph.nodes[key]["color"]
+            positions[key] = 15 * positions[key] + offsets[typecolor]
+
+        fig, ax = plt.subplots()
+        ax.set_title(title)
+        nx.draw(self.graph, node_color=color_map, pos=positions, node_size=120, ax=ax)
         plt.show()
 
     def _count_state(self, state):
@@ -109,7 +118,7 @@ class simulation:
 
         for t in range(T):
             if t in interventions:
-                interventions[t](self.graph)
+                interventions[t](self)
             self._step()
             self.stats = self.state_stats()
             data.append(self.stats)

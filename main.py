@@ -19,13 +19,6 @@ colors = {
     "D": "black"
 }
 
-def test_func(G):
-    print(len(G.nodes))
-
-interventions = {
-    1: test_func
-}
-
 def interstep(sim:simulate.simulation):
     if not hasattr(sim, "base_p"):
         sim.base_p = sim.p
@@ -39,14 +32,28 @@ def interstep(sim:simulate.simulation):
     pass
 
 # Graph setup
-graph = simulate.generate_prison()
+# graph = simulate.generate_prison()
+graph = None
+
+import networkx as nx
+with open("graphfile.bin", "rb") as pickle_file:
+    graph = nx.read_gpickle(pickle_file)
 average_contacts = len(graph.edges) / len(graph.nodes)
 p = R0 / (average_contacts * (time_infectious[0] + time_infectious[1])/2)
 
-# import networkx as nx
-# color_map = [node["color"] for node in graph.nodes.values()]
-# nx.draw(graph, node_color=color_map, node_size=120)#, pos=nx.random_layout(graph))
 
+
+# color_map = [node["color"] for node in graph.nodes.values()]
+# nx.draw(graph, node_color=color_map, node_size=120)
+
+def plot_wrapper(t:int):
+    def plot(sim:simulate.simulation):
+        sim.draw_colored(colors, title=t)
+    return plot
+
+interventions = {}
+for t in range(10, 120, 8):
+    interventions[t] = plot_wrapper(t)
 
 simulation = simulate.simulation(graph, p, time_infectious, time_exposed, 0.3, 20, 0.05)
 simulation.infect(0)
