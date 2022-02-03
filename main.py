@@ -48,7 +48,7 @@ p = R0 / (average_contacts * (time_infectious[0] + time_infectious[1])/2)
 # nx.draw(graph, node_color=color_map, node_size=120)#, pos=nx.random_layout(graph))
 
 
-simulation = simulate.simulation(graph, p, time_infectious, time_exposed, 0.3, 30, 0.05)
+simulation = simulate.simulation(graph, p, time_infectious, time_exposed, 0.3, 20, 0.05)
 simulation.infect(0)
 results = simulation.simulate(150, colors, interventions, interstep, True)
 

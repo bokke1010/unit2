@@ -76,6 +76,8 @@ class simulation:
                         node["state"] = "C"
                         self.isolated += 1
                 if node["time"] == 0:
+                    if node["state"] == "C":
+                        self.isolated -= 1
                     if random() < self.lethality:
                         node["state"] = "D"
                     else:
